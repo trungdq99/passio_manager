@@ -39,10 +39,12 @@ class LoginBloc implements Bloc {
       unAuthorizeHeader,
       user.toMap(),
     );
-    if (responseBody.isNotEmpty) {
+    if (responseBody != null) {
       var login = LoginModel.fromMap(responseBody);
       saveAccessToken(login.accessToken);
       _loginController.sink.add(login);
+    } else {
+      _loginController.sink.addError('Wrong username or password!');
     }
   }
 
