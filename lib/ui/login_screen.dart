@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/custom_widget.dart';
 import '../blocs/bloc_provider.dart';
 import '../blocs/login_bloc.dart';
 import '../utils/custom_colors.dart';
@@ -25,21 +26,16 @@ class _LoginScreenState extends State<LoginScreen> {
     final bloc = BlocProvider.of<LoginBloc>(context);
     bloc.enableBtnLogin(false);
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      resizeToAvoidBottomPadding: false,
+      resizeToAvoidBottomInset: true,
       body: GestureDetector(
         onTap: () {
           FocusScope.of(context).unfocus();
         },
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/images/img_bg.jpg',
-              fit: BoxFit.fitHeight,
-            ),
-            SingleChildScrollView(
-              child: Container(
+        child: SingleChildScrollView(
+          child: Stack(
+            children: [
+              CustomWidget.buildImageBackground(context),
+              Container(
                 height: MediaQuery.of(context).size.height,
                 alignment: Alignment.center,
                 child: Column(
@@ -177,8 +173,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

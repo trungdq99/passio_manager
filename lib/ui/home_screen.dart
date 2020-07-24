@@ -12,6 +12,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bloc = BlocProvider.of<LoginBloc>(context);
+    bloc.loadLogin();
     return StreamBuilder(
       stream: bloc.loginStream,
       builder: (context, snapshot) {
