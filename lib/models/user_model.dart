@@ -1,9 +1,15 @@
+import 'package:flutter/material.dart';
+
 class UserModel {
   String userName;
   String fullName;
   String email;
   String accessToken;
-  UserModel({this.userName, this.fullName, this.email, this.accessToken});
+  UserModel(
+      {this.userName: '',
+      this.fullName: '',
+      this.email: '',
+      this.accessToken: ''});
   UserModel.fromMap(Map<String, dynamic> map) {
     this.userName = map['user_name'];
     this.fullName = map['full_name'];

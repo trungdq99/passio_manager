@@ -1,3 +1,5 @@
+import 'package:rxdart/rxdart.dart';
+
 import '../../models/user_model.dart';
 import '../../models/user_login_model.dart';
 import '../../utils/constant.dart';
@@ -13,28 +15,29 @@ import 'package:http/http.dart' show Response;
 
 class AuthenticationBloc
     extends BlocEventStateBase<AuthenticationEvent, AuthenticationState> {
-  AuthenticationBloc(String accessToken)
+  AuthenticationBloc()
       : super(
-          initialState: accessToken != null
-              ? AuthenticationState.authenticated(accessToken)
-              : AuthenticationState.notAuthenticated(),
+          initialState: AuthenticationState.notAuthenticated(),
         );
 
   @override
   Stream<AuthenticationState> eventHandler(
       AuthenticationEvent event, AuthenticationState currentState) async* {
     if (event is AuthenticationEventLogin) {
-      // Inform that we are proceeding with the authentication
-      yield AuthenticationState.authenticating();
+      if (event.accessToken.isEmpty) {
+        yield AuthenticationState.notAuthenticated();
+      } // Access token is empty => UnAuthorize
+      else {
+        yield AuthenticationState.authenticating();
 
-      // Simulate a call to the authentication server
-      await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(const Duration(seconds: 2));
 
-      // Inform that we have successfully authenticated, or not
-      if (event.accessToken == "failure") {
-        yield AuthenticationState.failure();
-      } else {
-        yield AuthenticationState.authenticated(event.accessToken);
+        if (event.accessToken == "failure") {
+          yield AuthenticationState.failure();
+        } // Login failed!
+        else {
+          yield AuthenticationState.authenticated(event.accessToken);
+        } // Login successful!
       }
     }
 
@@ -75,16 +78,38 @@ class AuthenticationBloc
     Repository repository = Repository();
     Response response = await repository.fetchData(getUserApi,
         RequestMethod.GET, Helper.getAuthorizeHeader(accessToken), null);
-    UserModel user;
+    UserModel user = UserModel();
     if (response.statusCode == 200) {
       Map<String, dynamic> responseBody = Helper.decodeJson(response.body);
       if (responseBody != null) {
         user = UserModel.fromMap(responseBody);
         user.accessToken = accessToken;
       }
-    } else {
-      user = null;
     }
     return user;
+  }
+
+  loadPreviousLogin() async {
+    _loadController.sink
+        .add(await Helper.loadData(accessTokenKey, SavingType.String));
+  }
+
+  StreamController<String> _loadController = StreamController<String>();
+
+  Stream<String> get loadStream => _loadController.stream.transform(
+        StreamTransformer.fromHandlers(
+          handleData: (data, sink) {
+            if (data.isNotEmpty && data != 'failure') {
+              sink.add(data);
+            } else {
+              sink.addError('failure');
+            }
+          },
+        ),
+      );
+  @override
+  void dispose() {
+    _loadController?.close();
+    super.dispose();
   }
 }

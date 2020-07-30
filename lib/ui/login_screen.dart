@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController _txtUsernameController;
   TextEditingController _txtPasswordController;
   LoginFormBloc _loginFormBloc;
-  AuthenticationBloc bloc;
+  AuthenticationBloc _authenticationBloc;
 
   @override
   void initState() {
@@ -39,52 +39,34 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bloc = BlocProvider.of<AuthenticationBloc>(context);
+    _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
         onTap: () {
           FocusScope.of(context).unfocus();
         },
-        child: SingleChildScrollView(
-          child: Stack(
-            children: [
-              // Background
-              CustomWidget.buildImageBackground(context),
-              // Form login
-              _buildForm(),
-              BlocEventStateBuilder<AuthenticationState>(
-                bloc: bloc,
-                builder: (context, state) {
-                  if (state.isAuthenticating) {
-                    return CustomWidget.buildProcessing(context);
-                  }
-                  if (state.hasFailed) {
-                    return Container(
-                      alignment: Alignment.center,
-                      child: AlertDialog(
-                        title: Center(
-                          child: Text(
-                            'Login failed!',
-                            style: TextStyle(
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return Container();
-                },
+        child: BlocEventStateBuilder<AuthenticationState>(
+          bloc: _authenticationBloc,
+          builder: (context, state) {
+            List<Widget> _children = [];
+            _children.add(CustomWidget.buildImageBackground(context));
+            _children.add(_buildForm(state.hasFailed));
+            if (state.isAuthenticating) {
+              _children.add(CustomWidget.buildProcessing(context));
+            }
+            return SingleChildScrollView(
+              child: Stack(
+                children: _children,
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(bool isLoginFailed) {
     return Container(
       height: MediaQuery.of(context).size.height,
       alignment: Alignment.center,
@@ -96,9 +78,11 @@ class _LoginScreenState extends State<LoginScreen> {
             height: 10,
           ),
           _buildTxtPassword(),
-          SizedBox(
-            height: 20,
-          ),
+          isLoginFailed
+              ? _buildLbFailed()
+              : SizedBox(
+                  height: 30,
+                ),
           // btnLogin
           _buildBtnLogin(),
           SizedBox(
@@ -110,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // TextField for input username
   Widget _buildTxtUsername() {
     return StreamBuilder<String>(
       stream: _loginFormBloc.username,
@@ -136,6 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // TextField for input password
   Widget _buildTxtPassword() {
     return StreamBuilder<String>(
       stream: _loginFormBloc.password,
@@ -163,6 +149,23 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Label for showing failed status
+  Widget _buildLbFailed() {
+    return Container(
+      height: 30,
+      alignment: Alignment.centerLeft,
+      margin: EdgeInsets.symmetric(horizontal: 30),
+      child: Text(
+        'Sai Email hoặc Password',
+        style: TextStyle(
+          color: Colors.red,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
+  // Button Login
   Widget _buildBtnLogin() {
     return StreamBuilder(
         stream: _loginFormBloc.loginValid,
@@ -189,9 +192,9 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: isValid
                   ? () async {
                       FocusScope.of(context).unfocus();
-                      bloc.emitEvent(
+                      _authenticationBloc.emitEvent(
                         AuthenticationEventLogin(
-                          accessToken: await bloc.handleLogin(
+                          accessToken: await _authenticationBloc.handleLogin(
                               _txtUsernameController.text,
                               _txtPasswordController.text),
                         ),
@@ -211,6 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
   }
 
+  // Button Forget Password
   Widget _buildBtnForgetPassword() {
     return FlatButton(
       child: Text(
@@ -225,6 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // BoxDecoration for 2 TextFields
   BoxDecoration _textFieldDecoration = BoxDecoration(
       borderRadius: BorderRadius.all(Radius.circular(4)),
       boxShadow: [
@@ -235,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
             spreadRadius: 0)
       ],
       color: Colors.white);
-
+  // TextStyle for hintStyle of textField
   TextStyle _textFieldHintStyle = TextStyle(
     color: CustomColors.cool_grey,
     fontSize: 16.0,

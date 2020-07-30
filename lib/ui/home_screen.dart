@@ -23,6 +23,10 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, state) {
         if (state.isAuthenticated) {
           return Home();
+        } else if (state.isAuthenticating && state.accessToken.isNotEmpty) {
+          return Container(
+            color: Colors.white,
+          );
         } else {
           return LoginScreen();
         }

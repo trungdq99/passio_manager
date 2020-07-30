@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import '../blocs/login/authentication_event.dart';
-import '../blocs/login/authentication_state.dart';
 import '../ui/home_screen.dart';
 import '../bloc_helpers/bloc_provider.dart';
 import '../blocs/login/authentication_bloc.dart';
-import '../utils/helper.dart';
 import '../bloc_widgets/bloc_state_builder.dart';
 import '../blocs/application_initialization/application_initialization_state.dart';
 import '../blocs/application_initialization/application_initialization_bloc.dart';
@@ -25,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen>
   ApplicationInitializationBloc _applicationInitializationBloc;
   AuthenticationBloc _authenticationBloc;
   double _logoSize = 250;
-  bool error;
+
   @override
   void initState() {
     super.initState();
@@ -37,9 +35,6 @@ class _SplashScreenState extends State<SplashScreen>
 
     _applicationInitializationBloc = ApplicationInitializationBloc();
     _applicationInitializationBloc.emitEvent(ApplicationInitializationEvent());
-    _authenticationBloc = null;
-    error = false;
-    _checkIsLogin();
   }
 
   @override
@@ -51,70 +46,44 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocEventStateBuilder<ApplicationInitializationState>(
-      bloc: _applicationInitializationBloc,
-      builder: (context, state) {
-        if (state.isInitialized && _authenticationBloc != null) {
-          return BlocProvider<AuthenticationBloc>(
-            bloc: _authenticationBloc,
-            child: BlocEventStateBuilder<AuthenticationState>(
-              bloc: _authenticationBloc,
-              builder: (context, state) {
-                if (state.hasFailed && error) {
-                  return CustomWidget.buildErrorMessage(
-                    context,
-                    'Something when wrong!',
-                    () {
-                      _authenticationBloc
-                          .emitEvent(AuthenticationEventLogout());
-                      error = false;
-                    },
+    _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
+    // Load previous login
+    _authenticationBloc.loadPreviousLogin();
+    return Scaffold(
+      body: StreamBuilder<String>(
+          stream: _authenticationBloc.loadStream,
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              _authenticationBloc.emitEvent(
+                  AuthenticationEventLogin(accessToken: snapshot.data));
+            } // When load available access token successful, add authentication
+            return Container(
+              child: BlocEventStateBuilder<ApplicationInitializationState>(
+                bloc: _applicationInitializationBloc,
+                builder: (context, state) {
+                  // When app is loaded successful, navigate to HomeScreen
+                  if (state.isInitialized) {
+                    return HomeScreen();
+                  }
+                  // Build children widget for Stack Widget
+                  List<Widget> _children = [];
+                  _children.add(CustomWidget.buildImageBackground(context));
+                  _children.add(_buildLogo());
+                  // while loading app, show processing animation
+                  if (state.isInitializing) {
+                    _children.add(CustomWidget.buildProcessing(context));
+                  }
+                  return Stack(
+                    children: _children,
                   );
-                } else if (state.isAuthenticating && error) {
-                  return Container();
-                } else {
-                  return HomeScreen();
-                }
-              },
-            ),
-          );
-        }
-
-        List<Widget> _children = [];
-        _children.add(CustomWidget.buildImageBackground(context));
-        _children.add(_buildLogo());
-        if (state.isInitializing) {
-          _children.add(CustomWidget.buildProcessing(context));
-        }
-        return Scaffold(
-          body: Stack(
-            children: _children,
-          ),
-        );
-      },
+                },
+              ),
+            );
+          }),
     );
   }
 
-  _checkIsLogin() async {
-    String accessToken =
-        await Helper.loadData(accessTokenKey, SavingType.String);
-    print('AccessToken: $accessToken');
-    _authenticationBloc = AuthenticationBloc(null);
-    var user = await _authenticationBloc.getUser(accessToken);
-//    var user = await _authenticationBloc.getUser(
-//        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjN2JhMDkzMS1jMWRjLTQ2ZGUtYmE0My01NTIxN2VhZGMyMmUiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiZGVtbyIsImV4cCI6MTU5NTcyODU3NCwiaXNzIjoiVGhpcyBpcyBJc3Nlci4iLCJhdWQiOiJUaGlzIGlzIElzc2VyLiJ9.o6OE4vQZr5vlSJXuUu-Okeyw9mzM9ceuYR2L4uuu9jk');
-    if (user == null) {
-      if (accessToken != null) {
-        error = true;
-        _authenticationBloc
-            .emitEvent(AuthenticationEventLogin(accessToken: "failure"));
-      }
-    } else {
-      _authenticationBloc
-          .emitEvent(AuthenticationEventLogin(accessToken: accessToken));
-    }
-  }
-
+  // Build logo with animation
   Widget _buildLogo() {
     return FadeTransition(
       opacity: _logoAnimation,

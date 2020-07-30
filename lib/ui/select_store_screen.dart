@@ -30,7 +30,7 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
     return BlocEventStateBuilder<AuthenticationState>(
       bloc: _authenticationBloc,
       builder: (context, state) {
-        final _storeBloc = StoreBloc(state.accessToken);
+        final _storeBloc = StoreBloc();
 //        final _storeBloc = StoreBloc(
 //            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjN2JhMDkzMS1jMWRjLTQ2ZGUtYmE0My01NTIxN2VhZGMyMmUiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiZGVtbyIsImV4cCI6MTU5NTcyODU3NCwiaXNzIjoiVGhpcyBpcyBJc3Nlci4iLCJhdWQiOiJUaGlzIGlzIElzc2VyLiJ9.o6OE4vQZr5vlSJXuUu-Okeyw9mzM9ceuYR2L4uuu9jk');
         return BlocProvider<StoreBloc>(

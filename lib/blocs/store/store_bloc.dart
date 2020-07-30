@@ -33,18 +33,30 @@ class StoreBloc extends BlocEventStateBase<StoreEvent, StoreState>
   Future<StoreModel> loadPreviousStore(String accessToken) async {
     int id = await Helper.loadData(storeIdKey, SavingType.Int);
     if (id == null) {
-      id = -2;
+      return StoreModel(id: -2);
+    } // Store hasn't selected yet!
+    else if (id == -1) {
+      return StoreModel(id: -1);
+    } // Select all stores
+    else {
+      return getStore(accessToken, id);
     }
-    String api = id == -1 ? '$getStoresApi' : '$getStoresApi/$id';
+  }
+
+  Future<StoreModel> getStore(String accessToken, int id) async {
     Repository repository = Repository();
-    Response response = await repository.fetchData(
-        api, RequestMethod.GET, Helper.getAuthorizeHeader(accessToken), null);
+    Response response = await repository.fetchData('$getStoresApi/$id',
+        RequestMethod.GET, Helper.getAuthorizeHeader(accessToken), null);
     if (response.statusCode == 200) {
       Map<String, dynamic> responseBody = Helper.decodeJson(response.body);
-      selectStore(StoreModel.fromMap(responseBody));
-    } else if (response.statusCode == 401) {
-      _storeController.sink.addError('UnAuthorize');
-    }
+      return StoreModel.fromMap(responseBody);
+    } // Return valid store
+    else if (response.statusCode == 404) {
+      return StoreModel(id: -2);
+    } // Invalid store return store with id = -2
+    else {
+      return null;
+    } // UnAuthorize and other status return null
   }
 
   @override
@@ -58,8 +70,17 @@ class StoreBloc extends BlocEventStateBase<StoreEvent, StoreState>
     if (event.type == StoreEventType.selecting) {
       yield StoreState.selecting();
     }
+
     if (event.type == StoreEventType.selected) {
-      yield StoreState.selected(event.store);
+      if (event.store == null) {
+        yield StoreState.failure();
+      } // UnAuthorize
+      else if (event.store.id == -2) {
+        yield StoreState.notSelected();
+      } // Select invalid store return not select
+      else if (event.store.id >= -1) {
+        yield StoreState.selected(event.store);
+      } // Select store successful!
     }
   }
 }

@@ -42,4 +42,10 @@ class StoreState extends BlocState {
       isUpdating: true,
     );
   }
+  factory StoreState.failure() {
+    return StoreState(
+      isSelected: false,
+      hasFailed: true,
+    );
+  }
 }
