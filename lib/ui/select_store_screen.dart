@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import '../utils/custom_search_delegate.dart';
+import 'package:passio_manager/blocs/store/store_event.dart';
 import '../blocs/search_stores/selected_store_bloc.dart';
 import '../blocs/search_stores/search_stores_bloc.dart';
 import '../blocs/search_stores/search_stores_event.dart';
 import '../blocs/search_stores/search_stores_state.dart';
-import 'package:passio_manager/ui/home.dart';
 import '../blocs/login/authentication_event.dart';
 import '../models/store_model.dart';
 import '../utils/custom_widget.dart';
@@ -23,135 +22,155 @@ class SelectStoreScreen extends StatefulWidget {
 class _SelectStoreScreenState extends State<SelectStoreScreen> {
   SearchStoresBloc _searchStoresBloc;
   SelectedStoreBloc _selectedStoreBloc;
+  TextEditingController _txtSearchController;
+  List<StoreModel> _listStores;
+  StoreBloc _storeBloc;
+  @override
+  void initState() {
+    super.initState();
+    _searchStoresBloc = SearchStoresBloc();
+    _selectedStoreBloc = SelectedStoreBloc();
+    _txtSearchController = TextEditingController();
+    _listStores = [];
+  }
 
   @override
   Widget build(BuildContext context) {
     final _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
+    _storeBloc = BlocProvider.of<StoreBloc>(context);
     return BlocEventStateBuilder<AuthenticationState>(
-      bloc: _authenticationBloc,
-      builder: (context, state) {
-        final _storeBloc = StoreBloc();
-//        final _storeBloc = StoreBloc(
-//            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjN2JhMDkzMS1jMWRjLTQ2ZGUtYmE0My01NTIxN2VhZGMyMmUiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiZGVtbyIsImV4cCI6MTU5NTcyODU3NCwiaXNzIjoiVGhpcyBpcyBJc3Nlci4iLCJhdWQiOiJUaGlzIGlzIElzc2VyLiJ9.o6OE4vQZr5vlSJXuUu-Okeyw9mzM9ceuYR2L4uuu9jk');
-        return BlocProvider<StoreBloc>(
-          bloc: _storeBloc,
-          child: StreamBuilder<StoreModel>(
-            stream: _storeBloc.storeStream,
-            builder: (context, snapshot) {
-              if (snapshot.hasError && snapshot.error == 'UnAuthorize') {
-                return CustomWidget.buildErrorMessage(context, snapshot.error,
-                    () {
-                  _authenticationBloc.emitEvent(AuthenticationEventLogout());
-                });
-              } else if (!snapshot.hasData) {
-                _searchStoresBloc = SearchStoresBloc();
-                _loadAllStores(state.accessToken);
-                return BlocEventStateBuilder<SearchStoresState>(
-                  bloc: _searchStoresBloc,
-                  builder: (context, state) {
-                    List<Widget> _children = [];
-                    if (state.isSearching) {
-                      _children.add(CustomWidget.buildProcessing(context));
-                    }
-                    if (state.hasFailed) {
-                      _children.add(CustomWidget.buildErrorMessage(
-                          context, 'Something when wrong!', () {
-                        _authenticationBloc
-                            .emitEvent(AuthenticationEventLogout());
-                      }));
-                    }
-                    if (state.isSearched) {
-                      List<StoreModel> list = [
-                        StoreModel(id: -1, name: 'Tất cả cửa hàng'),
-                      ];
-                      list.addAll(state.listStores);
-                      _selectedStoreBloc = SelectedStoreBloc();
-                      _selectedStoreBloc.setIndex(0);
-                      _children.add(
-                        Container(
-                          padding: EdgeInsets.only(
-                            top: 16,
-                          ),
-                          child: ListView.builder(
-                            itemBuilder: (context, index) =>
-                                _buildStoreDetail(list[index], index),
-                            itemCount: list.length,
-                          ),
-                        ),
-                      );
-                      print('Search successful!');
-                    }
-
-                    _children.add(_buildConfirmButton());
-                    return Scaffold(
-                      appBar: _buildAppBar(),
-                      body: Stack(
-                        fit: StackFit.expand,
-                        children: _children,
-                      ),
-                      backgroundColor: CustomColors.background,
-                    );
-                  },
-                );
-              } else {
-                return Home();
+        bloc: _authenticationBloc,
+        builder: (context, state) {
+          _searchStoresBloc.loadAllStores(state.accessToken).whenComplete(() {
+            _searchStoresBloc.emitEvent(SearchStoreEventShowAll());
+          });
+          return BlocEventStateBuilder<SearchStoresState>(
+            bloc: _searchStoresBloc,
+            builder: (context, state) {
+              List<Widget> _children = [];
+              if (state.isSearching) {
+                _children.add(CustomWidget.buildProcessing(context));
               }
-            },
-          ),
-        );
-      },
-    );
-  }
+              if (state.hasFailed) {
+                _children.add(CustomWidget.buildErrorMessage(
+                    context, 'Something when wrong!', () {
+                  _authenticationBloc.emitEvent(AuthenticationEventLogout());
+                }));
+              }
+              if (state.isSearched) {
+                _listStores = state.listStores;
+                _selectedStoreBloc = SelectedStoreBloc();
+                _selectedStoreBloc.setIndex(0);
+                _children.add(
+                  Container(
+                    padding: EdgeInsets.only(
+                      top: 16,
+                    ),
+                    child: ListView.builder(
+                      itemBuilder: (context, index) =>
+                          _buildStoreDetail(_listStores[index], index),
+                      itemCount: _listStores.length,
+                    ),
+                  ),
+                );
+              }
 
-  _loadAllStores(String accessToken) async {
-//    List<StoreModel> listStores = await _searchStoresBloc.loadAllStores(
-//        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjN2JhMDkzMS1jMWRjLTQ2ZGUtYmE0My01NTIxN2VhZGMyMmUiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiZGVtbyIsImV4cCI6MTU5NTcyODU3NCwiaXNzIjoiVGhpcyBpcyBJc3Nlci4iLCJhdWQiOiJUaGlzIGlzIElzc2VyLiJ9.o6OE4vQZr5vlSJXuUu-Okeyw9mzM9ceuYR2L4uuu9jk');
-    List<StoreModel> listStores =
-        await _searchStoresBloc.loadAllStores(accessToken);
-    _searchStoresBloc.emitEvent(SearchStoresEvent(listStores: listStores));
+              _children.add(_buildConfirmButton());
+              return Scaffold(
+                appBar: state.showSearch
+                    ? _buildSearchAppBar()
+                    : _buildSelectStoreAppBar(),
+                body: Stack(
+                  fit: StackFit.expand,
+                  children: _children,
+                ),
+                backgroundColor: CustomColors.background,
+              );
+            },
+          );
+        });
   }
 
   // Build App Bar
-  Widget _buildAppBar() {
+  Widget _buildSelectStoreAppBar() {
     return AppBar(
       centerTitle: false,
       // Title
-      title: _buildTitle(),
+      title: Text(
+        'Chọn cửa hàng',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 16.0,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
       backgroundColor: Colors.white,
+      leading: FlatButton(
+        onPressed: () {},
+        child: Icon(
+          Icons.arrow_back,
+          color: Colors.black,
+          size: 20,
+        ),
+        minWidth: 50,
+      ),
       actions: [
         // Search Button
-        _buildSearchButton(),
+        FlatButton(
+          onPressed: () {
+            _searchStoresBloc.emitEvent(SearchStoreEventQuery(listStores: []));
+          },
+          child: Icon(
+            Icons.search,
+            color: Colors.black,
+            size: 20,
+          ),
+          minWidth: 50,
+        ),
       ],
     );
   }
 
-  // Build Title
-  Widget _buildTitle() {
-    return Text(
-      'Chọn cửa hàng',
-      style: TextStyle(
-        color: Colors.black,
-        fontSize: 16.0,
-        fontWeight: FontWeight.w800,
+  Widget _buildSearchAppBar() {
+    return AppBar(
+      centerTitle: false,
+      // Title
+      title: TextField(
+        controller: _txtSearchController,
+        keyboardType: TextInputType.text,
+        autofocus: true,
+        onChanged: (value) {
+          List<StoreModel> list = _searchStoresBloc.searchStores(value);
+          _searchStoresBloc.emitEvent(SearchStoreEventQuery(listStores: list));
+        },
       ),
-    );
-  }
-
-  // Build Search Button
-  Widget _buildSearchButton() {
-    return FlatButton(
-      onPressed: () {
-        showSearch(
-          context: context,
-          delegate: CustomSearchDelegate(),
-        );
-      },
-      child: Icon(
-        Icons.search,
-        color: Colors.black,
-        size: 20,
+      backgroundColor: Colors.white,
+      leading: FlatButton(
+        onPressed: () {
+          _searchStoresBloc.emitEvent(SearchStoreEventShowAll());
+        },
+        child: Icon(
+          Icons.arrow_back,
+          color: Colors.black,
+          size: 20,
+        ),
+        minWidth: 50,
       ),
-      minWidth: 50,
+      actions: [
+        // Clear Button
+        FlatButton(
+          onPressed: () {
+            _txtSearchController.clear();
+            _searchStoresBloc.emitEvent(SearchStoreEventQuery(listStores: []));
+          },
+          child: Icon(
+            Icons.close,
+            color: Colors.black,
+            size: 20,
+          ),
+          minWidth: 50,
+        ),
+      ],
     );
   }
 
@@ -163,16 +182,29 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
           width: MediaQuery.of(context).size.width,
           height: 50,
           margin: EdgeInsets.all(25),
-          child: FlatButton(
-            child: Text(
-              'Xong',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800),
-            ),
-            onPressed: () {},
-          ),
+          child: StreamBuilder<int>(
+              stream: _selectedStoreBloc.selectedIndex,
+              builder: (context, snapshot) {
+                return FlatButton(
+                  child: Text(
+                    'Xong',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800),
+                  ),
+                  onPressed: _listStores.isNotEmpty
+                      ? () {
+                          if (snapshot.hasData) {
+                            print(_listStores[snapshot.data].name);
+                          }
+                          _storeBloc.emitEvent(StoreEventSelected(
+                            store: _listStores[snapshot.data],
+                          ));
+                        }
+                      : null,
+                );
+              }),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.all(Radius.circular(4)),
             boxShadow: [
@@ -223,7 +255,6 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
               groupValue: snapshot.data,
               onChanged: (val) {
                 _selectedStoreBloc.setIndex(val);
-                print('$index');
               },
               activeColor: CustomColors.sick_green,
             );

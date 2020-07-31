@@ -24,20 +24,26 @@ class AuthenticationBloc
   Stream<AuthenticationState> eventHandler(
       AuthenticationEvent event, AuthenticationState currentState) async* {
     if (event is AuthenticationEventLogin) {
+      yield AuthenticationState.authenticating();
+
+      await Future.delayed(const Duration(seconds: 2));
+
       if (event.accessToken.isEmpty) {
         yield AuthenticationState.notAuthenticated();
       } // Access token is empty => UnAuthorize
+      else if (event.accessToken == "failure") {
+        yield AuthenticationState.failure();
+      } // Login failed!
       else {
-        yield AuthenticationState.authenticating();
+        yield AuthenticationState.authenticated(event.accessToken);
+      } // Login successful!
+    }
 
-        await Future.delayed(const Duration(seconds: 2));
-
-        if (event.accessToken == "failure") {
-          yield AuthenticationState.failure();
-        } // Login failed!
-        else {
-          yield AuthenticationState.authenticated(event.accessToken);
-        } // Login successful!
+    if (event is AuthenticationEventLoadLogin) {
+      if (event.accessToken.isEmpty) {
+        yield AuthenticationState.notAuthenticated();
+      } else {
+        yield AuthenticationState.authenticated(event.accessToken);
       }
     }
 
@@ -89,27 +95,9 @@ class AuthenticationBloc
     return user;
   }
 
-  loadPreviousLogin() async {
-    _loadController.sink
-        .add(await Helper.loadData(accessTokenKey, SavingType.String));
-  }
-
-  StreamController<String> _loadController = StreamController<String>();
-
-  Stream<String> get loadStream => _loadController.stream.transform(
-        StreamTransformer.fromHandlers(
-          handleData: (data, sink) {
-            if (data.isNotEmpty && data != 'failure') {
-              sink.add(data);
-            } else {
-              sink.addError('failure');
-            }
-          },
-        ),
-      );
-  @override
-  void dispose() {
-    _loadController?.close();
-    super.dispose();
+  Future<UserModel> loadPreviousLogin() async {
+    String accessToken =
+        await Helper.loadData(accessTokenKey, SavingType.String);
+    return getUser(accessToken);
   }
 }

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:passio_manager/blocs/store/store_bloc.dart';
+import 'package:passio_manager/blocs/store/store_event.dart';
+import 'package:passio_manager/models/store_model.dart';
+import 'package:passio_manager/models/user_model.dart';
 import '../blocs/login/authentication_event.dart';
 import '../ui/home_screen.dart';
 import '../bloc_helpers/bloc_provider.dart';
@@ -22,6 +26,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   ApplicationInitializationBloc _applicationInitializationBloc;
   AuthenticationBloc _authenticationBloc;
+  StoreBloc _storeBloc;
   double _logoSize = 250;
 
   @override
@@ -47,40 +52,54 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
+    _storeBloc = BlocProvider.of<StoreBloc>(context);
     // Load previous login
-    _authenticationBloc.loadPreviousLogin();
+    _loadPreviousLogin();
     return Scaffold(
-      body: StreamBuilder<String>(
-          stream: _authenticationBloc.loadStream,
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              _authenticationBloc.emitEvent(
-                  AuthenticationEventLogin(accessToken: snapshot.data));
-            } // When load available access token successful, add authentication
-            return Container(
-              child: BlocEventStateBuilder<ApplicationInitializationState>(
-                bloc: _applicationInitializationBloc,
-                builder: (context, state) {
-                  // When app is loaded successful, navigate to HomeScreen
-                  if (state.isInitialized) {
-                    return HomeScreen();
-                  }
-                  // Build children widget for Stack Widget
-                  List<Widget> _children = [];
-                  _children.add(CustomWidget.buildImageBackground(context));
-                  _children.add(_buildLogo());
-                  // while loading app, show processing animation
-                  if (state.isInitializing) {
-                    _children.add(CustomWidget.buildProcessing(context));
-                  }
-                  return Stack(
-                    children: _children,
-                  );
-                },
-              ),
+      body: Container(
+        child: BlocEventStateBuilder<ApplicationInitializationState>(
+          bloc: _applicationInitializationBloc,
+          builder: (context, state) {
+            // When app is loaded successful, navigate to HomeScreen
+            if (state.isInitialized) {
+              return HomeScreen();
+            }
+            // Build children widget for Stack Widget
+            List<Widget> _children = [];
+            _children.add(CustomWidget.buildImageBackground(context));
+            _children.add(_buildLogo());
+            return Stack(
+              children: _children,
             );
-          }),
+          },
+        ),
+      ),
     );
+  }
+
+  _loadPreviousLogin() async {
+    UserModel user = await _authenticationBloc.loadPreviousLogin();
+    String accessToken = user.accessToken;
+    if (user.accessToken.isNotEmpty) {
+      _loadPreviousStore(accessToken);
+    }
+    _authenticationBloc
+        .emitEvent(AuthenticationEventLoadLogin(accessToken: accessToken));
+  }
+
+  _loadPreviousStore(String accessToken) async {
+    StoreModel store = await _storeBloc.loadPreviousStore(accessToken);
+    if (store != null) {
+      if (store.id >= -1) {
+        _storeBloc.emitEvent(
+          StoreEventSelected(
+            store: store,
+          ),
+        );
+        print('Selected');
+      }
+    }
+    print('If you are here => not selected');
   }
 
   // Build logo with animation

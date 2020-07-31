@@ -17,17 +17,22 @@ class SearchStoresBloc
   SearchStoresBloc() : super(initialState: SearchStoresState.notSearched());
   @override
   Stream<SearchStoresState> eventHandler(
-      SearchStoresEvent event, SearchStoresState currentState) async* {
-    if (event.type == SearchStoresEventType.done) {
-      yield SearchStoresState.notSearched();
+      SearchStoresEvent event, SearchStoresState state) async* {
+    if (_listStores == null && state.isSearched) {
+      yield SearchStoresState.failure();
     } else {
       yield SearchStoresState.searching();
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      if (event.listStores == null) {
-        yield SearchStoresState.failure();
+      if (_listStores == null) {
+        await Future.delayed(Duration(seconds: 2));
+      }
+      if (event is SearchStoreEventShowAll) {
+        yield SearchStoresState.searched(_listStores, false);
       } else {
-        yield SearchStoresState.searched(event.listStores);
+        if (event.listStores == null) {
+          yield SearchStoresState.failure();
+        } else {
+          yield SearchStoresState.searched(event.listStores, true);
+        }
       }
     }
   }
@@ -35,25 +40,33 @@ class SearchStoresBloc
   List<StoreModel> _listStores;
   List<StoreModel> get listStores => _listStores;
 
-  Future<List<StoreModel>> loadAllStores(String accessToken) async {
+  Future loadAllStores(String accessToken) async {
     Repository repository = Repository();
     Response response = await repository.fetchData(getStoresApi,
         RequestMethod.GET, Helper.getAuthorizeHeader(accessToken), null);
-    List<StoreModel> listStores;
     if (response.statusCode == 200) {
       List responseBody = Helper.decodeJson(response.body);
-      listStores = <StoreModel>[];
+      _listStores = [StoreModel(id: -1)];
       responseBody.forEach((element) {
         Map<String, dynamic> map = element;
-        listStores.add(StoreModel.fromMap(map));
-        print(map);
+        _listStores.add(StoreModel.fromMap(map));
       });
-      _listStores = listStores;
     } else {
-      listStores = null;
+      _listStores = null;
     }
+  }
 
-    return listStores;
+  List<StoreModel> searchStores(String query) {
+    List<StoreModel> stores = [];
+    if (query.isNotEmpty) {
+      for (int i = 1; i < _listStores.length; i++) {
+        StoreModel store = _listStores[i];
+        if (store.name.contains(query) || store.address.contains(query)) {
+          stores.add(store);
+        }
+      }
+    }
+    return stores;
   }
 
   @override

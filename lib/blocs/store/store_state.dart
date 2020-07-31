@@ -8,13 +8,11 @@ class StoreState extends BlocState {
   final bool isSelected;
   final bool isSelecting;
   final bool hasFailed;
-  final bool isUpdating;
 
   final StoreModel store;
   StoreState({
     @required this.isSelected,
     this.isSelecting: false,
-    this.isUpdating: false,
     this.store,
     this.hasFailed: false,
   });
@@ -22,6 +20,7 @@ class StoreState extends BlocState {
   factory StoreState.notSelected() {
     return StoreState(
       isSelected: false,
+      store: StoreModel(id: -1),
     );
   }
   factory StoreState.selected(StoreModel store) {
@@ -30,16 +29,11 @@ class StoreState extends BlocState {
       store: store,
     );
   }
-  factory StoreState.selecting() {
+  factory StoreState.selecting(StoreModel store) {
     return StoreState(
       isSelected: false,
       isSelecting: true,
-    );
-  }
-  factory StoreState.updating() {
-    return StoreState(
-      isSelected: false,
-      isUpdating: true,
+      store: store,
     );
   }
   factory StoreState.failure() {

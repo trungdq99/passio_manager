@@ -16,4 +16,12 @@ class AuthenticationEventLogin extends AuthenticationEvent {
         );
 }
 
+class AuthenticationEventLoadLogin extends AuthenticationEvent {
+  AuthenticationEventLoadLogin({
+    String accessToken,
+  }) : super(
+          accessToken: accessToken,
+        );
+}
+
 class AuthenticationEventLogout extends AuthenticationEvent {}

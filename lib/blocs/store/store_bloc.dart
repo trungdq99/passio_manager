@@ -2,33 +2,13 @@ import 'package:http/http.dart' show Response;
 import '../../bloc_helpers/bloc_event_state.dart';
 import './store_event.dart';
 import './store_state.dart';
-
 import '../../repository/repository.dart';
 import '../../utils/constant.dart';
 import '../../utils/helper.dart';
-
 import '../../models/store_model.dart';
-import 'package:rxdart/rxdart.dart';
 
-import '../../bloc_helpers/bloc_base.dart';
-
-class StoreBloc extends BlocEventStateBase<StoreEvent, StoreState>
-    implements BlocBase {
+class StoreBloc extends BlocEventStateBase<StoreEvent, StoreState> {
   StoreBloc() : super(initialState: StoreState.notSelected());
-
-  // Stores Controller
-  final BehaviorSubject<StoreModel> _storeController = BehaviorSubject();
-  // Store Stream
-  Stream<StoreModel> get storeStream => _storeController.stream;
-
-  selectStore(StoreModel store) {
-    _storeController.sink.add(store);
-  }
-
-  @override
-  void dispose() {
-    _storeController?.close();
-  }
 
   Future<StoreModel> loadPreviousStore(String accessToken) async {
     int id = await Helper.loadData(storeIdKey, SavingType.Int);
@@ -61,17 +41,7 @@ class StoreBloc extends BlocEventStateBase<StoreEvent, StoreState>
 
   @override
   Stream<StoreState> eventHandler(StoreEvent event, StoreState state) async* {
-    if (event.type == StoreEventType.notSelected) {
-      yield StoreState.notSelected();
-    }
-    if (event.type == StoreEventType.updating) {
-      yield StoreState.updating();
-    }
-    if (event.type == StoreEventType.selecting) {
-      yield StoreState.selecting();
-    }
-
-    if (event.type == StoreEventType.selected) {
+    if (event is StoreEventSelected) {
       if (event.store == null) {
         yield StoreState.failure();
       } // UnAuthorize
@@ -79,8 +49,11 @@ class StoreBloc extends BlocEventStateBase<StoreEvent, StoreState>
         yield StoreState.notSelected();
       } // Select invalid store return not select
       else if (event.store.id >= -1) {
+        Helper.saveData(storeIdKey, event.store.id, SavingType.Int);
         yield StoreState.selected(event.store);
       } // Select store successful!
+    } else {
+      yield StoreState.selecting(state.store);
     }
   }
 }
