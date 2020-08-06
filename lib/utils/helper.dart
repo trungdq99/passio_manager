@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 import './constant.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert' show json;
@@ -51,11 +53,25 @@ class Helper {
   }
 
   static Map<String, String> getAuthorizeHeader(String accessToken) {
-    Map<String, String> authorizeHeader = unAuthorizeHeader;
+    Map<String, String> authorizeHeader = {};
+    authorizeHeader.addAll(UN_AUTHORIZE_HEADER);
     authorizeHeader.addAll({'Authorization': 'bearer $accessToken'});
     return authorizeHeader;
   }
 
   static String encodeJson(Object value) => json.encode(value);
   static dynamic decodeJson(String value) => json.decode(value);
+
+  static String numberFormat(dynamic number, UnitType type) {
+    if (type == UnitType.vnd) {
+      return NumberFormat.currency(decimalDigits: 0, symbol: 'đ', locale: 'vi')
+          .format(number);
+    } else {
+      return NumberFormat.decimalPattern().format(number) + ' đơn';
+    }
+  }
+
+  static String percentFormat(dynamic number) {
+    return NumberFormat.decimalPercentPattern(decimalDigits: 2).format(number);
+  }
 }

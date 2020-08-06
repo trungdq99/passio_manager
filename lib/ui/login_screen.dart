@@ -55,11 +55,15 @@ class _LoginScreenState extends State<LoginScreen> {
             if (state.isAuthenticating) {
               _children.add(CustomWidget.buildProcessing(context));
             }
-            return SingleChildScrollView(
-              child: Stack(
-                children: _children,
-              ),
-            );
+            if (state.isAuthenticated) {
+              return Container();
+            } else {
+              return SingleChildScrollView(
+                child: Stack(
+                  children: _children,
+                ),
+              );
+            }
           },
         ),
       ),
@@ -194,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       FocusScope.of(context).unfocus();
                       _authenticationBloc.emitEvent(
                         AuthenticationEventLogin(
-                          accessToken: await _authenticationBloc.handleLogin(
+                          user: await _authenticationBloc.handleLogin(
                               _txtUsernameController.text,
                               _txtPasswordController.text),
                         ),

@@ -11,7 +11,7 @@ class StoreBloc extends BlocEventStateBase<StoreEvent, StoreState> {
   StoreBloc() : super(initialState: StoreState.notSelected());
 
   Future<StoreModel> loadPreviousStore(String accessToken) async {
-    int id = await Helper.loadData(storeIdKey, SavingType.Int);
+    int id = await Helper.loadData(STORE_ID_KEY, SavingType.Int);
     if (id == null) {
       return StoreModel(id: -2);
     } // Store hasn't selected yet!
@@ -25,7 +25,7 @@ class StoreBloc extends BlocEventStateBase<StoreEvent, StoreState> {
 
   Future<StoreModel> getStore(String accessToken, int id) async {
     Repository repository = Repository();
-    Response response = await repository.fetchData('$getStoresApi/$id',
+    Response response = await repository.fetchData('$GET_STORES_API/$id',
         RequestMethod.GET, Helper.getAuthorizeHeader(accessToken), null);
     if (response.statusCode == 200) {
       Map<String, dynamic> responseBody = Helper.decodeJson(response.body);
@@ -49,11 +49,11 @@ class StoreBloc extends BlocEventStateBase<StoreEvent, StoreState> {
         yield StoreState.notSelected();
       } // Select invalid store return not select
       else if (event.store.id >= -1) {
-        Helper.saveData(storeIdKey, event.store.id, SavingType.Int);
+        Helper.saveData(STORE_ID_KEY, event.store.id, SavingType.Int);
         yield StoreState.selected(event.store);
       } // Select store successful!
     } else {
-      yield StoreState.selecting(state.store);
+      yield StoreState.selecting(event.store);
     }
   }
 }

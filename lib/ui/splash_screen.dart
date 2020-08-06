@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:passio_manager/blocs/store/store_bloc.dart';
-import 'package:passio_manager/blocs/store/store_event.dart';
-import 'package:passio_manager/models/store_model.dart';
-import 'package:passio_manager/models/user_model.dart';
+import 'package:passio_manager/blocs/overview/overview_bloc.dart';
+import 'package:passio_manager/blocs/overview/overview_event.dart';
+import 'package:passio_manager/models/date_report_model.dart';
+import '../blocs/store/store_bloc.dart';
+import '../blocs/store/store_event.dart';
+import '../models/store_model.dart';
+import '../models/user_model.dart';
 import '../blocs/login/authentication_event.dart';
 import '../ui/home_screen.dart';
 import '../bloc_helpers/bloc_provider.dart';
@@ -27,6 +30,7 @@ class _SplashScreenState extends State<SplashScreen>
   ApplicationInitializationBloc _applicationInitializationBloc;
   AuthenticationBloc _authenticationBloc;
   StoreBloc _storeBloc;
+  OverviewBloc _overviewBloc;
   double _logoSize = 250;
 
   @override
@@ -53,6 +57,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
     _storeBloc = BlocProvider.of<StoreBloc>(context);
+    _overviewBloc = BlocProvider.of<OverviewBloc>(context);
     // Load previous login
     _loadPreviousLogin();
     return Scaffold(
@@ -83,12 +88,12 @@ class _SplashScreenState extends State<SplashScreen>
     if (user.accessToken.isNotEmpty) {
       _loadPreviousStore(accessToken);
     }
-    _authenticationBloc
-        .emitEvent(AuthenticationEventLoadLogin(accessToken: accessToken));
+    _authenticationBloc.emitEvent(AuthenticationEventLoadLogin(user: user));
   }
 
   _loadPreviousStore(String accessToken) async {
     StoreModel store = await _storeBloc.loadPreviousStore(accessToken);
+    bool isSelected = false;
     if (store != null) {
       if (store.id >= -1) {
         _storeBloc.emitEvent(
@@ -96,10 +101,19 @@ class _SplashScreenState extends State<SplashScreen>
             store: store,
           ),
         );
-        print('Selected');
+        isSelected = true;
       }
     }
-    print('If you are here => not selected');
+    if (!isSelected) {
+      _storeBloc.emitEvent(
+        StoreEventSelecting(
+          store: StoreModel(id: -1),
+        ),
+      );
+      print('Not selected!');
+    } else {
+      print('Selected!');
+    }
   }
 
   // Build logo with animation
@@ -109,7 +123,7 @@ class _SplashScreenState extends State<SplashScreen>
       child: Center(
         child: SizedBox(
           height: _logoSize,
-          child: Image.asset(logoImagePath),
+          child: Image.asset(LOGO_IMAGE_PATH),
         ),
       ),
     );

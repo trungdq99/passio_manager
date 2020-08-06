@@ -1,3 +1,5 @@
+import '../../models/user_model.dart';
+
 import '../../bloc_helpers/bloc_event_state.dart';
 import 'package:meta/meta.dart';
 
@@ -6,14 +8,14 @@ class AuthenticationState extends BlocState {
     @required this.isAuthenticated,
     this.isAuthenticating: false,
     this.hasFailed: false,
-    this.accessToken: '',
+    this.user,
   });
 
   final bool isAuthenticated;
   final bool isAuthenticating;
   final bool hasFailed;
 
-  final String accessToken;
+  final UserModel user;
 
   factory AuthenticationState.notAuthenticated() {
     return AuthenticationState(
@@ -21,10 +23,10 @@ class AuthenticationState extends BlocState {
     );
   }
 
-  factory AuthenticationState.authenticated(String accessToken) {
+  factory AuthenticationState.authenticated(UserModel user) {
     return AuthenticationState(
       isAuthenticated: true,
-      accessToken: accessToken,
+      user: user,
     );
   }
 

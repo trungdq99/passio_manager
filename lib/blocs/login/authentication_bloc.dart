@@ -28,22 +28,22 @@ class AuthenticationBloc
 
       await Future.delayed(const Duration(seconds: 2));
 
-      if (event.accessToken.isEmpty) {
+      if (event.user.accessToken.isEmpty) {
         yield AuthenticationState.notAuthenticated();
       } // Access token is empty => UnAuthorize
-      else if (event.accessToken == "failure") {
+      else if (event.user.accessToken == 'failure') {
         yield AuthenticationState.failure();
       } // Login failed!
       else {
-        yield AuthenticationState.authenticated(event.accessToken);
+        yield AuthenticationState.authenticated(event.user);
       } // Login successful!
     }
 
     if (event is AuthenticationEventLoadLogin) {
-      if (event.accessToken.isEmpty) {
+      if (event.user.accessToken.isEmpty) {
         yield AuthenticationState.notAuthenticated();
       } else {
-        yield AuthenticationState.authenticated(event.accessToken);
+        yield AuthenticationState.authenticated(event.user);
       }
     }
 
@@ -52,37 +52,38 @@ class AuthenticationBloc
     }
   }
 
-  Future<String> handleLogin(String username, String password) async {
-    var user = UserLoginModel(
+  Future<UserModel> handleLogin(String username, String password) async {
+    var login = UserLoginModel(
       username: username,
       password: password,
     );
     Repository repository = Repository();
     Response response = await repository.fetchData(
-      checkLoginApi,
+      CHECK_LOGIN_API,
       RequestMethod.POST,
-      unAuthorizeHeader,
-      Helper.encodeJson(user.toMap()),
+      UN_AUTHORIZE_HEADER,
+      Helper.encodeJson(login.toMap()),
     );
-    String accessToken = 'failure';
+    UserModel user = UserModel();
+    user.accessToken = 'failure';
     if (response.statusCode == 200) {
       Map<String, dynamic> responseBody = Helper.decodeJson(response.body);
       if (responseBody != null) {
-        var user = UserModel.fromMap(responseBody);
-        accessToken = user.accessToken;
-        Helper.saveData(accessTokenKey, accessToken, SavingType.String);
+        user = UserModel.fromMap(responseBody);
+        String accessToken = user.accessToken;
+        Helper.saveData(ACCESS_TOKEN_KEY, accessToken, SavingType.String);
         print('Login successful!');
         print('Access Token success: $accessToken');
       }
     } else {
       print('Login failed!');
     }
-    return accessToken;
+    return user;
   }
 
   Future<UserModel> getUser(String accessToken) async {
     Repository repository = Repository();
-    Response response = await repository.fetchData(getUserApi,
+    Response response = await repository.fetchData(GET_USER_API,
         RequestMethod.GET, Helper.getAuthorizeHeader(accessToken), null);
     UserModel user = UserModel();
     if (response.statusCode == 200) {
@@ -97,7 +98,7 @@ class AuthenticationBloc
 
   Future<UserModel> loadPreviousLogin() async {
     String accessToken =
-        await Helper.loadData(accessTokenKey, SavingType.String);
+        await Helper.loadData(ACCESS_TOKEN_KEY, SavingType.String);
     return getUser(accessToken);
   }
 }

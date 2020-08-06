@@ -2,18 +2,14 @@ import '../../models/store_model.dart';
 import '../../utils/constant.dart';
 import '../../utils/helper.dart';
 import 'package:http/http.dart' show Response;
-import '../../bloc_helpers/bloc_base.dart';
-
 import '../../repository/repository.dart';
-
 import '../../bloc_helpers/bloc_event_state.dart';
 import './search_stores_event.dart';
 import './search_stores_state.dart';
 import 'dart:async';
 
 class SearchStoresBloc
-    extends BlocEventStateBase<SearchStoresEvent, SearchStoresState>
-    implements BlocBase {
+    extends BlocEventStateBase<SearchStoresEvent, SearchStoresState> {
   SearchStoresBloc() : super(initialState: SearchStoresState.notSearched());
   @override
   Stream<SearchStoresState> eventHandler(
@@ -42,13 +38,14 @@ class SearchStoresBloc
 
   Future loadAllStores(String accessToken) async {
     Repository repository = Repository();
-    Response response = await repository.fetchData(getStoresApi,
+    Response response = await repository.fetchData(GET_STORES_API,
         RequestMethod.GET, Helper.getAuthorizeHeader(accessToken), null);
     if (response.statusCode == 200) {
       List responseBody = Helper.decodeJson(response.body);
       _listStores = [StoreModel(id: -1)];
       responseBody.forEach((element) {
         Map<String, dynamic> map = element;
+        print(element);
         _listStores.add(StoreModel.fromMap(map));
       });
     } else {
@@ -67,10 +64,5 @@ class SearchStoresBloc
       }
     }
     return stores;
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:passio_manager/blocs/store/store_event.dart';
+import 'package:passio_manager/blocs/overview/overview_bloc.dart';
+import '../blocs/store/store_event.dart';
 import '../blocs/search_stores/selected_store_bloc.dart';
 import '../blocs/search_stores/search_stores_bloc.dart';
 import '../blocs/search_stores/search_stores_event.dart';
@@ -25,6 +26,7 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
   TextEditingController _txtSearchController;
   List<StoreModel> _listStores;
   StoreBloc _storeBloc;
+  OverviewBloc _overviewBloc;
   @override
   void initState() {
     super.initState();
@@ -38,12 +40,18 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
   Widget build(BuildContext context) {
     final _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
     _storeBloc = BlocProvider.of<StoreBloc>(context);
+    _overviewBloc = BlocProvider.of<OverviewBloc>(context);
     return BlocEventStateBuilder<AuthenticationState>(
-        bloc: _authenticationBloc,
-        builder: (context, state) {
-          _searchStoresBloc.loadAllStores(state.accessToken).whenComplete(() {
-            _searchStoresBloc.emitEvent(SearchStoreEventShowAll());
-          });
+      bloc: _authenticationBloc,
+      builder: (context, state) {
+        if (state.isAuthenticated) {
+          if (state.user != null) {
+            _searchStoresBloc
+                .loadAllStores(state.user.accessToken)
+                .whenComplete(() {
+              _searchStoresBloc.emitEvent(SearchStoreEventShowAll());
+            });
+          }
           return BlocEventStateBuilder<SearchStoresState>(
             bloc: _searchStoresBloc,
             builder: (context, state) {
@@ -88,7 +96,11 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
               );
             },
           );
-        });
+        } else {
+          return Container();
+        }
+      },
+    );
   }
 
   // Build App Bar
@@ -106,9 +118,12 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
       ),
       backgroundColor: Colors.white,
       leading: FlatButton(
-        onPressed: () {},
+        onPressed: () {
+          _storeBloc
+              .emitEvent(StoreEventSelected(store: _storeBloc.lastState.store));
+        },
         child: Icon(
-          Icons.arrow_back,
+          Icons.close,
           color: Colors.black,
           size: 20,
         ),
@@ -260,6 +275,7 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
             );
           },
         ),
+
         contentPadding: EdgeInsets.symmetric(
           horizontal: 16,
           vertical: store.address.isNotEmpty ? 8 : 2,

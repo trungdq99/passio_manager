@@ -9,25 +9,19 @@ class ApiProvider {
       String body) async {
     Response response;
     if (method == RequestMethod.GET) {
-      response = await client.get('$baseUrl/$api', headers: header);
+      response = await client.get('$BASE_URL/$api', headers: header);
     } else if (method == RequestMethod.POST) {
       response =
-          await client.post('$baseUrl/$api', headers: header, body: body);
+          await client.post('$BASE_URL/$api', headers: header, body: body);
     } else if (method == RequestMethod.PUT) {
-      response = await client.put('$baseUrl/$api', headers: header, body: body);
+      response =
+          await client.put('$BASE_URL/$api', headers: header, body: body);
     } else if (method == RequestMethod.PATCH) {
       response =
-          await client.patch('$baseUrl/$api', headers: header, body: body);
+          await client.patch('$BASE_URL/$api', headers: header, body: body);
     } else if (method == RequestMethod.DELETE) {
-      response = await client.delete('$baseUrl/$api', headers: header);
+      response = await client.delete('$BASE_URL/$api', headers: header);
     }
-//    if (response.statusCode == 200) {
-//      print('Status code is 200');
-//      return json.decode(response.body);
-//    } else {
-//      print('Failed to load post');
-//      return null;
-//    }
     return response;
   }
 }
