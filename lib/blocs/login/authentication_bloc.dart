@@ -25,31 +25,39 @@ class AuthenticationBloc
       AuthenticationEvent event, AuthenticationState currentState) async* {
     if (event is AuthenticationEventLogin) {
       yield AuthenticationState.authenticating();
-
-      await Future.delayed(const Duration(seconds: 2));
-
-      if (event.user.accessToken.isEmpty) {
-        yield AuthenticationState.notAuthenticated();
-      } // Access token is empty => UnAuthorize
-      else if (event.user.accessToken == 'failure') {
-        yield AuthenticationState.failure();
-      } // Login failed!
-      else {
-        yield AuthenticationState.authenticated(event.user);
-      } // Login successful!
-    }
-
-    if (event is AuthenticationEventLoadLogin) {
-      if (event.user.accessToken.isEmpty) {
-        yield AuthenticationState.notAuthenticated();
-      } else {
-        yield AuthenticationState.authenticated(event.user);
+      UserModel userModel;
+      userModel = await handleLogin(event.username, event.password);
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (userModel != null) {
+        if (userModel.accessToken == 'failure') {
+          yield AuthenticationState.failure();
+        } // Login failed!
+        else {
+          Helper.saveData(
+              ACCESS_TOKEN_KEY, userModel.accessToken, SavingType.String);
+          yield AuthenticationState.authenticated(userModel: userModel);
+        } // Login successful!
       }
-    }
-
-    if (event is AuthenticationEventLogout) {
+    } // Finish Event Login
+    else if (event is AuthenticationEventLoadLogin) {
+      yield AuthenticationState.authenticating();
+      UserModel userModel;
+      userModel = await loadPreviousLogin();
+      if (userModel != null) {
+        if (userModel.accessToken.isEmpty) {
+          yield AuthenticationState.notAuthenticated();
+          print('Load failed!');
+        } else {
+          yield AuthenticationState.authenticated(userModel: userModel);
+          print('Load successful!');
+        }
+      }
+    } // Finish Event Load login
+    else if (event is AuthenticationEventLogout) {
+      Helper.removeData(ACCESS_TOKEN_KEY);
+      Helper.removeData(STORE_ID_KEY);
       yield AuthenticationState.notAuthenticated();
-    }
+    } // Finish Event Logout
   }
 
   Future<UserModel> handleLogin(String username, String password) async {
@@ -64,20 +72,15 @@ class AuthenticationBloc
       UN_AUTHORIZE_HEADER,
       Helper.encodeJson(login.toMap()),
     );
-    UserModel user = UserModel();
-    user.accessToken = 'failure';
+    UserModel user = UserModel(accessToken: 'failure');
     if (response.statusCode == 200) {
       Map<String, dynamic> responseBody = Helper.decodeJson(response.body);
       if (responseBody != null) {
         user = UserModel.fromMap(responseBody);
         String accessToken = user.accessToken;
-        Helper.saveData(ACCESS_TOKEN_KEY, accessToken, SavingType.String);
-        print('Login successful!');
         print('Access Token success: $accessToken');
       }
-    } else {
-      print('Login failed!');
-    }
+    } else {}
     return user;
   }
 
@@ -99,6 +102,10 @@ class AuthenticationBloc
   Future<UserModel> loadPreviousLogin() async {
     String accessToken =
         await Helper.loadData(ACCESS_TOKEN_KEY, SavingType.String);
-    return getUser(accessToken);
+    if (accessToken == null) {
+      return UserModel();
+    } else {
+      return getUser(accessToken);
+    }
   }
 }

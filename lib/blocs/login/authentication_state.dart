@@ -8,14 +8,13 @@ class AuthenticationState extends BlocState {
     @required this.isAuthenticated,
     this.isAuthenticating: false,
     this.hasFailed: false,
-    this.user,
+    this.userModel,
   });
 
   final bool isAuthenticated;
   final bool isAuthenticating;
   final bool hasFailed;
-
-  final UserModel user;
+  final UserModel userModel;
 
   factory AuthenticationState.notAuthenticated() {
     return AuthenticationState(
@@ -23,10 +22,10 @@ class AuthenticationState extends BlocState {
     );
   }
 
-  factory AuthenticationState.authenticated(UserModel user) {
+  factory AuthenticationState.authenticated({UserModel userModel}) {
     return AuthenticationState(
       isAuthenticated: true,
-      user: user,
+      userModel: userModel,
     );
   }
 

@@ -5,8 +5,6 @@ import '../bloc_helpers/bloc_provider.dart';
 import '../blocs/login/authentication_bloc.dart';
 import '../blocs/login/authentication_event.dart';
 import '../blocs/store/store_bloc.dart';
-import '../blocs/store/store_event.dart';
-import '../models/store_model.dart';
 import '../models/user_model.dart';
 import '../utils/constant.dart';
 import '../utils/custom_colors.dart';
@@ -20,13 +18,11 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   AuthenticationBloc _authenticationBloc;
-  StoreBloc _storeBloc;
   double _deviceWidth;
   @override
   Widget build(BuildContext context) {
     _deviceWidth = MediaQuery.of(context).size.width;
     _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
-    _storeBloc = BlocProvider.of<StoreBloc>(context);
     return Scaffold(
       backgroundColor: CustomColors.background,
       body: Column(
@@ -53,14 +49,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfile() {
-    UserModel user = _authenticationBloc.lastState.user;
+    UserModel user = _authenticationBloc.lastState.userModel;
     return Container(
       height: _deviceWidth / 2,
       width: _deviceWidth,
       alignment: Alignment.center,
       child: ListTile(
         title: Text(
-          'Xin chào, ${user.userName}',
+          'Xin chào, ${user?.userName}',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
@@ -68,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         subtitle: Text(
-          user.email,
+          user?.email,
           style: TextStyle(
             color: Colors.white,
             fontSize: 14,
@@ -150,14 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildLogoutButton() {
     return FlatButton(
       onPressed: () {
-        Helper.removeData(ACCESS_TOKEN_KEY);
-        Helper.removeData(STORE_ID_KEY);
         _authenticationBloc.emitEvent(AuthenticationEventLogout());
-        _storeBloc.emitEvent(StoreEventSelecting(
-          store: StoreModel(
-            id: -1,
-          ),
-        ));
       },
       child: Text(
         'Đăng xuất',

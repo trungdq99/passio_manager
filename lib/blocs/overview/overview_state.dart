@@ -1,23 +1,35 @@
-import '../../models/date_report_model.dart';
 import '../../bloc_helpers/bloc_event_state.dart';
 
 class OverviewState implements BlocState {
-  bool isOverview;
+  bool isLoad;
   bool isLoading;
   bool hasFailed;
-  DateReportModel dateReport;
+  bool showRevenue;
+  bool showReceipts;
 
   OverviewState({
-    this.isOverview: false,
+    this.isLoad: false,
     this.isLoading: false,
     this.hasFailed: false,
-    this.dateReport,
+    this.showRevenue: false,
+    this.showReceipts: false,
   });
 
-  factory OverviewState.overview(DateReportModel dateReport) {
+  factory OverviewState.load() {
     return OverviewState(
-      isOverview: true,
-      dateReport: dateReport,
+      isLoad: true,
+    );
+  }
+
+  factory OverviewState.showRevenue() {
+    return OverviewState(
+      showRevenue: true,
+    );
+  }
+
+  factory OverviewState.showReceipts() {
+    return OverviewState(
+      showRevenue: true,
     );
   }
 
@@ -26,6 +38,7 @@ class OverviewState implements BlocState {
       isLoading: true,
     );
   }
+
   factory OverviewState.failure() {
     return OverviewState(
       hasFailed: true,

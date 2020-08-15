@@ -1,44 +1,41 @@
-import 'package:flutter/material.dart';
-
 import '../../models/store_model.dart';
-
 import '../../bloc_helpers/bloc_event_state.dart';
 
 class StoreState extends BlocState {
   final bool isSelected;
   final bool isSelecting;
   final bool hasFailed;
+  final StoreModel storeModel;
 
-  final StoreModel store;
   StoreState({
-    @required this.isSelected,
+    this.isSelected: false,
     this.isSelecting: false,
-    this.store,
+    this.storeModel,
     this.hasFailed: false,
   });
 
   factory StoreState.notSelected() {
     return StoreState(
-      isSelected: false,
-      store: StoreModel(id: -1),
+      storeModel: StoreModel(id: -1),
     );
   }
-  factory StoreState.selected(StoreModel store) {
+
+  factory StoreState.selected({StoreModel storeModel}) {
     return StoreState(
       isSelected: true,
-      store: store,
+      storeModel: storeModel,
     );
   }
-  factory StoreState.selecting(StoreModel store) {
+
+  factory StoreState.selecting({int storeId}) {
     return StoreState(
-      isSelected: false,
       isSelecting: true,
-      store: store,
+      storeModel: StoreModel(id: storeId),
     );
   }
+
   factory StoreState.failure() {
     return StoreState(
-      isSelected: false,
       hasFailed: true,
     );
   }

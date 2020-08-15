@@ -1,6 +1,12 @@
 import 'dart:ui';
-
-import 'package:passio_manager/utils/custom_colors.dart';
+import 'package:flutter/material.dart';
+import 'package:passio_manager/ui/authentication_screen.dart';
+import 'package:passio_manager/ui/overview_filter_screen.dart';
+import 'package:passio_manager/ui/overview_receipts_screen.dart';
+import 'package:passio_manager/ui/overview_revenue_screen.dart';
+import '../ui/home_screen.dart';
+import '../ui/login_screen.dart';
+import './custom_colors.dart';
 
 // API constant
 const String BASE_URL = 'https://passioreportapi.azurewebsites.net';
@@ -58,3 +64,12 @@ const List<Color> CHART_COLOR = [
   CustomColors.pastel_red,
   CustomColors.dark_sky_blue,
 ];
+
+final Map<String, WidgetBuilder> listRoutes = {
+  '/authentication': (BuildContext context) => AuthenticationPage(),
+  '/home': (BuildContext context) => HomeScreen(),
+  '/login': (BuildContext context) => LoginScreen(),
+  '/overview_filter': (BuildContext context) => OverviewFilterScreen(),
+  '/overview_revenue': (BuildContext context) => OverviewRevenueScreen(),
+  '/overview_receipts': (BuildContext context) => OverviewReceiptsScreen(),
+};

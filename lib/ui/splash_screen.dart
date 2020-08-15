@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:passio_manager/blocs/login/authentication_state.dart';
+import '../blocs/filter/filter_bloc.dart';
 import 'package:passio_manager/blocs/overview/overview_bloc.dart';
-import 'package:passio_manager/blocs/overview/overview_event.dart';
-import 'package:passio_manager/models/date_report_model.dart';
 import '../blocs/store/store_bloc.dart';
 import '../blocs/store/store_event.dart';
 import '../models/store_model.dart';
@@ -29,8 +29,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   ApplicationInitializationBloc _applicationInitializationBloc;
   AuthenticationBloc _authenticationBloc;
-  StoreBloc _storeBloc;
-  OverviewBloc _overviewBloc;
   double _logoSize = 250;
 
   @override
@@ -43,7 +41,9 @@ class _SplashScreenState extends State<SplashScreen>
     _animationController.forward();
 
     _applicationInitializationBloc = ApplicationInitializationBloc();
-    _applicationInitializationBloc.emitEvent(ApplicationInitializationEvent());
+    _applicationInitializationBloc.emitEvent(ApplicationInitializationEvent(
+        applicationInitializationEventType:
+            ApplicationInitializationEventType.initialized));
   }
 
   @override
@@ -56,68 +56,31 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
-    _storeBloc = BlocProvider.of<StoreBloc>(context);
-    _overviewBloc = BlocProvider.of<OverviewBloc>(context);
     // Load previous login
-    _loadPreviousLogin();
-    return Scaffold(
-      body: Container(
-        child: BlocEventStateBuilder<ApplicationInitializationState>(
-          bloc: _applicationInitializationBloc,
-          builder: (context, state) {
-            // When app is loaded successful, navigate to HomeScreen
-            if (state.isInitialized) {
-              return HomeScreen();
-            }
-            // Build children widget for Stack Widget
-            List<Widget> _children = [];
-            _children.add(CustomWidget.buildImageBackground(context));
-            _children.add(_buildLogo());
-            return Stack(
-              children: _children,
-            );
-          },
-        ),
-      ),
+    _authenticationBloc.emitEvent(AuthenticationEventLoadLogin());
+    return BlocEventStateBuilder<ApplicationInitializationState>(
+      bloc: _applicationInitializationBloc,
+      builder: (context, applicationInitializationState) {
+        if (applicationInitializationState.isInitialized) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.of(context).pushReplacementNamed('/authentication');
+          });
+        }
+        // Build children widget for Stack Widget
+        List<Widget> _children = [];
+        _children.add(CustomWidget.buildImageBackground(context));
+        _children.add(_buildLogoTransition());
+        return Scaffold(
+          body: Stack(
+            children: _children,
+          ),
+        );
+      },
     );
   }
 
-  _loadPreviousLogin() async {
-    UserModel user = await _authenticationBloc.loadPreviousLogin();
-    String accessToken = user.accessToken;
-    if (user.accessToken.isNotEmpty) {
-      _loadPreviousStore(accessToken);
-    }
-    _authenticationBloc.emitEvent(AuthenticationEventLoadLogin(user: user));
-  }
-
-  _loadPreviousStore(String accessToken) async {
-    StoreModel store = await _storeBloc.loadPreviousStore(accessToken);
-    bool isSelected = false;
-    if (store != null) {
-      if (store.id >= -1) {
-        _storeBloc.emitEvent(
-          StoreEventSelected(
-            store: store,
-          ),
-        );
-        isSelected = true;
-      }
-    }
-    if (!isSelected) {
-      _storeBloc.emitEvent(
-        StoreEventSelecting(
-          store: StoreModel(id: -1),
-        ),
-      );
-      print('Not selected!');
-    } else {
-      print('Selected!');
-    }
-  }
-
   // Build logo with animation
-  Widget _buildLogo() {
+  Widget _buildLogoTransition() {
     return FadeTransition(
       opacity: _logoAnimation,
       child: Center(

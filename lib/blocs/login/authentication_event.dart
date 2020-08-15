@@ -1,29 +1,24 @@
-import '../../models/user_model.dart';
-
 import '../../bloc_helpers/bloc_event_state.dart';
 
 abstract class AuthenticationEvent extends BlocEvent {
-  final UserModel user;
-
   AuthenticationEvent({
-    this.user,
+    this.username,
+    this.password,
   });
+  String username;
+  String password;
 }
 
 class AuthenticationEventLogin extends AuthenticationEvent {
   AuthenticationEventLogin({
-    UserModel user,
+    String username,
+    String password,
   }) : super(
-          user: user,
+          username: username,
+          password: password,
         );
 }
 
-class AuthenticationEventLoadLogin extends AuthenticationEvent {
-  AuthenticationEventLoadLogin({
-    UserModel user,
-  }) : super(
-          user: user,
-        );
-}
+class AuthenticationEventLoadLogin extends AuthenticationEvent {}
 
 class AuthenticationEventLogout extends AuthenticationEvent {}

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:passio_manager/blocs/overview/overview_bloc.dart';
-import '../blocs/store/store_event.dart';
-import '../blocs/search_stores/selected_store_bloc.dart';
-import '../blocs/search_stores/search_stores_bloc.dart';
-import '../blocs/search_stores/search_stores_event.dart';
-import '../blocs/search_stores/search_stores_state.dart';
+import '../blocs/filter/filter_bloc.dart';
+import '../blocs/filter/filter_event.dart';
+import '../blocs/filter/filter_state.dart';
+import '../blocs/search_stores/selected_index_bloc.dart';
+import '../blocs/search_stores/search_store_bloc.dart';
+import '../blocs/search_stores/search_store_event.dart';
+import '../blocs/search_stores/search_store_state.dart';
 import '../blocs/login/authentication_event.dart';
 import '../models/store_model.dart';
 import '../utils/custom_widget.dart';
@@ -12,93 +13,86 @@ import '../bloc_helpers/bloc_provider.dart';
 import '../bloc_widgets/bloc_state_builder.dart';
 import '../blocs/login/authentication_bloc.dart';
 import '../blocs/login/authentication_state.dart';
-import '../blocs/store/store_bloc.dart';
 import '../utils/custom_colors.dart';
 
 class SelectStoreScreen extends StatefulWidget {
+  final String route;
+  SelectStoreScreen({@required this.route});
   @override
-  _SelectStoreScreenState createState() => _SelectStoreScreenState();
+  _SelectStoreScreenState createState() =>
+      _SelectStoreScreenState(route: route);
 }
 
 class _SelectStoreScreenState extends State<SelectStoreScreen> {
-  SearchStoresBloc _searchStoresBloc;
-  SelectedStoreBloc _selectedStoreBloc;
+  _SelectStoreScreenState({@required this.route});
+  final String route;
+  SearchStoreBloc _searchStoreBloc;
   TextEditingController _txtSearchController;
   List<StoreModel> _listStores;
-  StoreBloc _storeBloc;
-  OverviewBloc _overviewBloc;
+  AuthenticationBloc _authenticationBloc;
+  FilterBloc _filterBloc;
+  SelectedIndexBloc _selectedIndexBloc;
+
   @override
   void initState() {
     super.initState();
-    _searchStoresBloc = SearchStoresBloc();
-    _selectedStoreBloc = SelectedStoreBloc();
+    _searchStoreBloc = SearchStoreBloc();
     _txtSearchController = TextEditingController();
     _listStores = [];
+    _selectedIndexBloc = SelectedIndexBloc();
+    _selectedIndexBloc.setIndex(0);
   }
 
   @override
   Widget build(BuildContext context) {
-    final _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
-    _storeBloc = BlocProvider.of<StoreBloc>(context);
-    _overviewBloc = BlocProvider.of<OverviewBloc>(context);
-    return BlocEventStateBuilder<AuthenticationState>(
-      bloc: _authenticationBloc,
-      builder: (context, state) {
-        if (state.isAuthenticated) {
-          if (state.user != null) {
-            _searchStoresBloc
-                .loadAllStores(state.user.accessToken)
-                .whenComplete(() {
-              _searchStoresBloc.emitEvent(SearchStoreEventShowAll());
-            });
-          }
-          return BlocEventStateBuilder<SearchStoresState>(
-            bloc: _searchStoresBloc,
-            builder: (context, state) {
-              List<Widget> _children = [];
-              if (state.isSearching) {
-                _children.add(CustomWidget.buildProcessing(context));
-              }
-              if (state.hasFailed) {
-                _children.add(CustomWidget.buildErrorMessage(
-                    context, 'Something when wrong!', () {
-                  _authenticationBloc.emitEvent(AuthenticationEventLogout());
-                }));
-              }
-              if (state.isSearched) {
-                _listStores = state.listStores;
-                _selectedStoreBloc = SelectedStoreBloc();
-                _selectedStoreBloc.setIndex(0);
-                _children.add(
-                  Container(
-                    padding: EdgeInsets.only(
-                      top: 16,
-                    ),
-                    child: ListView.builder(
-                      itemBuilder: (context, index) =>
-                          _buildStoreDetail(_listStores[index], index),
-                      itemCount: _listStores.length,
-                    ),
-                  ),
-                );
-              }
-
-              _children.add(_buildConfirmButton());
-              return Scaffold(
-                appBar: state.showSearch
-                    ? _buildSearchAppBar()
-                    : _buildSelectStoreAppBar(),
-                body: Stack(
-                  fit: StackFit.expand,
-                  children: _children,
-                ),
-                backgroundColor: CustomColors.background,
-              );
-            },
-          );
-        } else {
-          return Container();
+    _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
+    _filterBloc = BlocProvider.of<FilterBloc>(context);
+    String accessToken = '';
+    if (_authenticationBloc.lastState.isAuthenticated) {
+      accessToken = _authenticationBloc.lastState.userModel?.accessToken;
+    }
+    if (accessToken.isNotEmpty) {
+      _searchStoreBloc
+          .emitEvent(SearchStoreEventLoad(accessToken: accessToken));
+    }
+    return BlocEventStateBuilder<SearchStoreState>(
+      bloc: _searchStoreBloc,
+      builder: (context, searchStoreState) {
+        List<Widget> _children = [];
+        if (searchStoreState.isLoading) {
+          _children.add(CustomWidget.buildProcessing(context));
         }
+        if (searchStoreState.hasFailed) {
+          CustomWidget.buildErrorMessage(context, 'Something when wrong!', () {
+            _authenticationBloc.emitEvent(AuthenticationEventLogout());
+          });
+        }
+        if (searchStoreState.isLoaded) {
+          _listStores = searchStoreState.listStores;
+        }
+        _children.add(
+          Container(
+            padding: EdgeInsets.only(
+              top: 16,
+            ),
+            child: ListView.builder(
+              itemBuilder: (context, index) =>
+                  _buildStoreDetail(_listStores[index], index),
+              itemCount: _listStores.length,
+            ),
+          ),
+        );
+        _children.add(_buildConfirmButton());
+        return Scaffold(
+          appBar: searchStoreState.showSearch
+              ? _buildSearchAppBar()
+              : _buildSelectStoreAppBar(),
+          body: Stack(
+            //fit: StackFit.expand,
+            children: _children,
+          ),
+          backgroundColor: CustomColors.background,
+        );
       },
     );
   }
@@ -117,30 +111,37 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
         ),
       ),
       backgroundColor: Colors.white,
-      leading: FlatButton(
-        onPressed: () {
-          _storeBloc
-              .emitEvent(StoreEventSelected(store: _storeBloc.lastState.store));
+      leading: BlocEventStateBuilder<FilterState>(
+        builder: (context, filterState) {
+          return FlatButton(
+            onPressed: () {
+              if (filterState.notSelectStore) {
+                _filterBloc.emitEvent(FilterEventDefaultOverview());
+              }
+              Navigator.of(context).pop();
+            },
+            child: Icon(
+              Icons.close,
+              color: Colors.black,
+              size: 20,
+            ),
+            minWidth: 50,
+          );
         },
-        child: Icon(
-          Icons.close,
-          color: Colors.black,
-          size: 20,
-        ),
-        minWidth: 50,
+        bloc: _filterBloc,
       ),
       actions: [
         // Search Button
-        FlatButton(
-          onPressed: () {
-            _searchStoresBloc.emitEvent(SearchStoreEventQuery(listStores: []));
-          },
-          child: Icon(
+        IconButton(
+          icon: Icon(
             Icons.search,
             color: Colors.black,
             size: 20,
           ),
-          minWidth: 50,
+          onPressed: () {
+            _searchStoreBloc.emitEvent(SearchStoreEventSearch(searchValue: ''));
+            _selectedIndexBloc.setIndex(0);
+          },
         ),
       ],
     );
@@ -155,14 +156,17 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
         keyboardType: TextInputType.text,
         autofocus: true,
         onChanged: (value) {
-          List<StoreModel> list = _searchStoresBloc.searchStores(value);
-          _searchStoresBloc.emitEvent(SearchStoreEventQuery(listStores: list));
+          _searchStoreBloc
+              .emitEvent(SearchStoreEventSearch(searchValue: value));
+          _selectedIndexBloc.setIndex(0);
         },
       ),
       backgroundColor: Colors.white,
       leading: FlatButton(
         onPressed: () {
-          _searchStoresBloc.emitEvent(SearchStoreEventShowAll());
+          _txtSearchController.clear();
+          _searchStoreBloc.emitEvent(SearchStoreEventShowAll());
+          _selectedIndexBloc.setIndex(0);
         },
         child: Icon(
           Icons.arrow_back,
@@ -176,7 +180,7 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
         FlatButton(
           onPressed: () {
             _txtSearchController.clear();
-            _searchStoresBloc.emitEvent(SearchStoreEventQuery(listStores: []));
+            _searchStoreBloc.emitEvent(SearchStoreEventSearch(searchValue: ''));
           },
           child: Icon(
             Icons.close,
@@ -197,29 +201,46 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
           width: MediaQuery.of(context).size.width,
           height: 50,
           margin: EdgeInsets.all(25),
-          child: StreamBuilder<int>(
-              stream: _selectedStoreBloc.selectedIndex,
-              builder: (context, snapshot) {
-                return FlatButton(
-                  child: Text(
-                    'Xong',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800),
-                  ),
-                  onPressed: _listStores.isNotEmpty
-                      ? () {
-                          if (snapshot.hasData) {
-                            print(_listStores[snapshot.data].name);
-                          }
-                          _storeBloc.emitEvent(StoreEventSelected(
-                            store: _listStores[snapshot.data],
-                          ));
-                        }
-                      : null,
-                );
-              }),
+          child: BlocEventStateBuilder<AuthenticationState>(
+            bloc: _authenticationBloc,
+            builder: (context, authenticationState) {
+              return StreamBuilder<int>(
+                stream: _selectedIndexBloc.selectedIndex,
+                builder: (context, snapshot) {
+                  return BlocEventStateBuilder<FilterState>(
+                    builder: (context, filterState) {
+                      return FlatButton(
+                        child: Text(
+                          'Xong',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800),
+                        ),
+                        onPressed: snapshot.hasData && _listStores.length > 0
+                            ? () {
+                                if (filterState.notSelectStore) {
+                                  _filterBloc.emitEvent(FilterEventSelected(
+                                    storeModel: _listStores[snapshot.data],
+                                    dateTimeRange: filterState.dateTimeRange,
+                                  ));
+                                } else {
+                                  _filterBloc.emitEvent(FilterEventUpdate(
+                                    storeModel: _listStores[snapshot.data],
+                                    dateTimeRange: filterState.dateTimeRange,
+                                  ));
+                                }
+                                Navigator.of(context).pop();
+                              }
+                            : null,
+                      );
+                    },
+                    bloc: _filterBloc,
+                  );
+                },
+              );
+            },
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.all(Radius.circular(4)),
             boxShadow: [
@@ -263,13 +284,13 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
               )
             : null,
         leading: StreamBuilder<int>(
-          stream: _selectedStoreBloc.selectedIndex,
+          stream: _selectedIndexBloc.selectedIndex,
           builder: (context, snapshot) {
             return Radio(
               value: index,
-              groupValue: snapshot.data,
+              groupValue: snapshot.hasData ? snapshot.data : 0,
               onChanged: (val) {
-                _selectedStoreBloc.setIndex(val);
+                _selectedIndexBloc.setIndex(val);
               },
               activeColor: CustomColors.sick_green,
             );
@@ -280,7 +301,7 @@ class _SelectStoreScreenState extends State<SelectStoreScreen> {
           horizontal: 16,
           vertical: store.address.isNotEmpty ? 8 : 2,
         ),
-        onTap: () => _selectedStoreBloc.setIndex(index),
+        onTap: () => _selectedIndexBloc.setIndex(index),
       ),
     );
   }

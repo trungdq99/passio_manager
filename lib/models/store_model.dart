@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class StoreModel {
   int id;
+  // ID = -3 : un authorize
   // ID = -2 : not select
   // ID = -1 : All Stores
   // ID >= 0 : existed store
@@ -19,6 +20,4 @@ class StoreModel {
     this.name = map['name'];
     this.address = map['address'];
   }
-
-  bool equalTo(StoreModel store) => this.id == store.id;
 }

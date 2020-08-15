@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:passio_manager/blocs/filter/filter_event.dart';
+import 'package:passio_manager/blocs/filter/filter_state.dart';
+import 'package:passio_manager/blocs/overview/overview_event.dart';
+import 'package:passio_manager/models/store_model.dart';
+import '../blocs/filter/filter_bloc.dart';
 import './overview_receipts_screen.dart';
 import '../bloc_helpers/bloc_provider.dart';
 import '../bloc_widgets/bloc_state_builder.dart';
@@ -7,8 +12,6 @@ import '../blocs/login/authentication_event.dart';
 import '../blocs/overview/overview_bloc.dart';
 import '../blocs/overview/overview_screen_bloc.dart';
 import '../blocs/overview/overview_state.dart';
-import '../blocs/store/store_bloc.dart';
-import '../blocs/store/store_event.dart';
 import '../models/date_report_model.dart';
 import './overview_revenue_screen.dart';
 import '../utils/constant.dart';
@@ -26,7 +29,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   OverviewScreenBloc _overviewScreenBloc;
   OverviewBloc _overviewBloc;
   AuthenticationBloc _authenticationBloc;
-  StoreBloc _storeBloc;
+  FilterBloc _filterBloc;
   @override
   void initState() {
     super.initState();
@@ -39,8 +42,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
   @override
   Widget build(BuildContext context) {
     _authenticationBloc = BlocProvider.of<AuthenticationBloc>(context);
-    _storeBloc = BlocProvider.of<StoreBloc>(context);
+    _filterBloc = BlocProvider.of<FilterBloc>(context);
     _overviewBloc = BlocProvider.of<OverviewBloc>(context);
+    DateReportModel dateReportModel =
+        _overviewBloc.dateReportModel ?? DateReportModel();
     return BlocEventStateBuilder<OverviewState>(
       bloc: _overviewBloc,
       builder: (context, state) {
@@ -49,12 +54,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
             _authenticationBloc.emitEvent(AuthenticationEventLogout());
           });
         }
-        DateReportModel dateReport = DateReportModel();
-        if (state.dateReport != null) {
-          dateReport = state.dateReport;
-        }
         List<Widget> _children = [];
-        _children.add(_buildScreen(dateReport));
+        _children.add(_buildScreen(dateReportModel));
         if (state.isLoading) {
           _children.add(CustomWidget.buildProcessing(context));
         }
@@ -113,27 +114,11 @@ class _OverviewScreenState extends State<OverviewScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _storeBloc.lastState.store != null
-                    ? _storeBloc.lastState.store.name
-                    : '',
-                style: TextStyle(
-                  fontSize: 14.0,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
+              _buildStoreNameLabel(),
               SizedBox(
                 height: 5.0,
               ),
-              Text(
-                'Chủ nhật, 12/08/2018',
-                style: TextStyle(
-                  fontSize: 14.0,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
+              _buildDateLabel(),
               SizedBox(
                 height: 20.0,
               ),
@@ -169,14 +154,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
               if (snapshot.hasData) {
                 icon = snapshot.data;
               }
-              return IconButton(
-                icon: Image.asset(icon),
-                onPressed: () {
-                  print('You have pressed filter button');
-                  _storeBloc.emitEvent(
-                      StoreEventSelecting(store: _storeBloc.lastState.store));
-                },
-              );
+              return _buildFilterButton(icon);
             }),
         StreamBuilder<String>(
             stream: _overviewScreenBloc.shareIcon,
@@ -243,9 +221,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
           FlatButton(
             onPressed: () {
               print('show revenue');
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => OverviewRevenueScreen(),
-              ));
+              _overviewBloc.emitEvent(OverviewEventShowRevenue());
             },
             child: Text(
               'Xem chi tiết',
@@ -313,9 +289,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
           FlatButton(
             onPressed: () {
               print('show receipts');
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => OverviewReceiptsScreen(),
-              ));
+              _overviewBloc.emitEvent(OverviewEventShowReceipts());
             },
             child: Text(
               'Xem chi tiết',
@@ -351,6 +325,50 @@ class _OverviewScreenState extends State<OverviewScreen> {
           fontSize: 16.0,
         ),
       ),
+    );
+  }
+
+  Widget _buildStoreNameLabel() {
+    StoreModel storeModel = _filterBloc.storeModel ?? StoreModel(id: -1);
+    return Text(
+      storeModel.name,
+      style: TextStyle(
+        fontSize: 14.0,
+        color: Colors.white,
+        fontWeight: FontWeight.w300,
+      ),
+    );
+  }
+
+  Widget _buildDateLabel() {
+    DateTimeRange dateTimeRange = _filterBloc.dateTimeRange ??
+        DateTimeRange(
+          start: DateTime.now(),
+          end: DateTime.now(),
+        );
+    //if(dateTimeRange.duration.inDays)
+    return Text(
+      Helper.formatDateTime(dateTimeRange.start),
+      style: TextStyle(
+        fontSize: 14.0,
+        color: Colors.white,
+        fontWeight: FontWeight.w300,
+      ),
+    );
+  }
+
+  Widget _buildFilterButton(String iconPath) {
+    return BlocEventStateBuilder<FilterState>(
+      builder: (context, state) {
+        return IconButton(
+          icon: Image.asset(iconPath),
+          onPressed: () {
+            print('You have pressed filter button');
+            _filterBloc.emitEvent(FilterEventOverview());
+          },
+        );
+      },
+      bloc: _filterBloc,
     );
   }
 }

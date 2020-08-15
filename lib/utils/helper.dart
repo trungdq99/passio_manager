@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../models/store_model.dart';
 
 import './constant.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -73,5 +75,21 @@ class Helper {
 
   static String percentFormat(dynamic number) {
     return NumberFormat.decimalPercentPattern(decimalDigits: 2).format(number);
+  }
+
+  static String convertDateToString(DateTime date) {
+    return DateFormat('yy/MM/dd').format(date);
+  }
+
+  static String formatDateTime(DateTime date) {
+    return DateFormat('dd/MM/yyyy').format(date);
+  }
+
+  static bool compare2Stores(StoreModel storeModel1, StoreModel storeModel2) {
+    return storeModel1.id == storeModel2.id;
+  }
+
+  static bool isValidDateTimeRange(DateTimeRange dateTimeRange) {
+    return !dateTimeRange.duration.isNegative;
   }
 }

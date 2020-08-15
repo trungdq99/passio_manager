@@ -21,7 +21,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _txtUsernameController = TextEditingController();
     _txtPasswordController = TextEditingController();
@@ -30,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    // TODO: implement dispose
     _txtUsernameController?.dispose();
     _txtPasswordController?.dispose();
     _loginFormBloc?.dispose();
@@ -198,9 +196,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       FocusScope.of(context).unfocus();
                       _authenticationBloc.emitEvent(
                         AuthenticationEventLogin(
-                          user: await _authenticationBloc.handleLogin(
-                              _txtUsernameController.text,
-                              _txtPasswordController.text),
+                          username: _txtUsernameController.text,
+                          password: _txtPasswordController.text,
                         ),
                       );
                     }

@@ -1,19 +1,29 @@
-import '../../models/store_model.dart';
-
 import '../../bloc_helpers/bloc_event_state.dart';
 
-class StoreEvent extends BlocEvent {
+abstract class StoreEvent extends BlocEvent {
   StoreEvent({
-    this.store,
+    this.storeId,
+    this.accessToken,
   });
-
-  StoreModel store;
+  int storeId;
+  String accessToken;
 }
 
-class StoreEventSelected extends StoreEvent {
-  StoreEventSelected({StoreModel store}) : super(store: store);
+class StoreEventLoadPrevious extends StoreEvent {
+  StoreEventLoadPrevious({String accessToken})
+      : super(accessToken: accessToken);
+}
+
+class StoreEventSelect extends StoreEvent {
+  StoreEventSelect({
+    int storeId,
+    String accessToken,
+  }) : super(
+          storeId: storeId,
+          accessToken: accessToken,
+        );
 }
 
 class StoreEventSelecting extends StoreEvent {
-  StoreEventSelecting({StoreModel store}) : super(store: store);
+  StoreEventSelecting({int storeId}) : super(storeId: storeId);
 }
